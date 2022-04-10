@@ -4,8 +4,10 @@ Telegram bot for smart Github search by repository or by user
 
 # Requirements 
 
+```
 pip install python-telegram-bot --upgrade
 pip install PyGithub
+```
 
 # Usage 
 
