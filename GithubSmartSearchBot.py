@@ -26,12 +26,12 @@ def help(update, context):
     update.message.reply_text('You can search Github by repository (default) or by user. Switch on the mode you need and type repository or user details')
 
 
-def search(update, context):
-    # Search here
-    g.search_repositories(update.message.text)
-    # TODO: Answer with real search results
-    update.message.reply_text(update.message.text)
+def search(update, context):    
+    repos = g.search_repositories(update.message.text + ' fork:true sort:stars')
 
+    for repo in repos[:10]:
+        text = f"<a href='{repo.html_url}'>{repo.name}</a>"
+        update.message.reply_text(text, parse_mode='HTML')       
 
 def error(update, context):    
     logger.warning('Update "%s" caused error "%s"', update, context.error)
