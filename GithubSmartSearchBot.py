@@ -1,4 +1,4 @@
-# Python Bot to search Github by repository (default) or by user
+# Python Bot to search Github by repository or by user
 
 # Licensed under the MIT license.
 
@@ -9,7 +9,9 @@ import logging
 
 from github import Github
 from settings import *
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Dispatcher
+from telegram.ext import CommandHandler, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -18,20 +20,49 @@ logger = logging.getLogger(__name__)
 
 g = Github(GITHUB_ACCESS_TOKEN)
 
-def start(update, context):    
-    update.message.reply_text('Hi, you can start your smart Github search now')
+def main_menu_keyboard():
+    menu_main = [[InlineKeyboardButton('Search by repo', callback_data='repo')],
+                 [InlineKeyboardButton('Search by user', callback_data='user')]]
+    return InlineKeyboardMarkup(menu_main)
 
+def main_menu(bot, update):
+    query = bot.callback_query
+    query.answer()
+    bot.callback_query.message.edit_text(main_menu_message(),
+                          reply_markup=main_menu_keyboard())
+
+
+def repo_submenu(bot, update):
+    query = bot.callback_query
+    query.answer()
+    update.user_data["Repo"] = True
+    bot.callback_query.message.edit_text("Enter repo details:")
+
+def user_submenu(bot, update):
+    query = bot.callback_query
+    query.answer()
+    update.user_data["Repo"] = False
+    bot.callback_query.message.edit_text("Enter user details:")
+
+def main_menu_message():
+  return 'Choose the search option:'
+
+def start(update, context):
+    context.user_data["Repo"] = True
+    update.message.reply_text(main_menu_message(),
+                          reply_markup=main_menu_keyboard())
 
 def help(update, context):    
-    update.message.reply_text('You can search Github by repository (default) or by user. Switch on the mode you need and type repository or user details')
+    update.message.reply_text('You can search Github by repository or by user. Switch on the mode you need and type repository or user details')
 
 
-def search(update, context):    
-    repos = g.search_repositories(update.message.text + ' fork:true sort:stars')
+def search(update, context):
+    if context.user_data["Repo"] == True:    
+        repos = g.search_repositories(update.message.text + ' fork:true sort:stars')
 
-    for repo in repos[:10]:
-        text = f"<a href='{repo.html_url}'>{repo.name}</a>"
-        update.message.reply_text(text, parse_mode='HTML')       
+        for repo in repos[:10]:
+            text = f"<a href='{repo.html_url}'>{repo.name}</a>"
+            update.message.reply_text(text, parse_mode='HTML')
 
 def error(update, context):    
     logger.warning('Update "%s" caused error "%s"', update, context.error)
@@ -50,9 +81,13 @@ def main():
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
+    dp.add_handler(CommandHandler("help", help))   
     
     dp.add_handler(MessageHandler(Filters.text, search))
+
+    dp.add_handler(CallbackQueryHandler(main_menu, pattern='main'))
+    dp.add_handler(CallbackQueryHandler(repo_submenu, pattern='repo'))
+    dp.add_handler(CallbackQueryHandler(user_submenu, pattern='user'))
 
     # log all errors
     dp.add_error_handler(error)
