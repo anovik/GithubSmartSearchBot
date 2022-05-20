@@ -59,9 +59,20 @@ def help(update, context):
 def search(update, context):
     if context.user_data["Repo"] == True:    
         repos = g.search_repositories(update.message.text + ' fork:true sort:stars')
-
+        if repos.totalCount == 0:
+            return
         for repo in repos[:10]:
             text = f"<a href='{repo.html_url}'>{repo.name}</a>"
+            update.message.reply_text(text, parse_mode='HTML')
+    else:
+        users = g.search_users(update.message.text + ' sort:followers')
+        if users.totalCount == 0:
+            return
+        for user in users[:10]:
+            name = user.name
+            if not name:
+                name = user.login
+            text = f"<a href='{user.html_url}'>{name}</a>"
             update.message.reply_text(text, parse_mode='HTML')
 
 def error(update, context):    
